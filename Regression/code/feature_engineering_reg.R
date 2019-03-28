@@ -20,12 +20,13 @@ f_substitute<-function(x){
 
 cols<-names(raw_data)
 raw_data[ , (cols):=lapply(.SD,f_substitute)]
+str(raw_data)
+
 # or we can re-asign to raw_data, perhaps easier to read
-raw_data<-raw_data[ , lapply(.SD,f_substitute)]
-str(raw_data)
+# raw_data<-raw_data[ , lapply(.SD,f_substitute)]
 # or we could even directly call the function gsub 
-raw_data<-raw_data[ , lapply(.SD,gsub, pattern='\\?',replacement=NA)]
-str(raw_data)
+# raw_data<-raw_data[ , lapply(.SD,gsub, pattern='\\?',replacement=NA)]
+# str(raw_data)
 
 # we write on a new csv
 raw_data<-fwrite(raw_data,'Datasets/Automobile_2.csv')
@@ -40,8 +41,8 @@ str(data_proc)
 data_proc[ , names(data_proc)[sapply(data_proc, is.character)]:=lapply(.SD,as.factor),
            .SDcols = names(data_proc)[sapply(data_proc, is.character)]]
 # or
-data_proc[ , names(which(sapply(data_proc, is.character))):=lapply(.SD,as.factor),
-           .SDcols = names(which(sapply(data_proc, is.character)))]
+# data_proc[ , names(which(sapply(data_proc, is.character))):=lapply(.SD,as.factor),
+#            .SDcols = names(which(sapply(data_proc, is.character)))]
 str(data_proc)
 
 # and integers to numeric
@@ -52,9 +53,9 @@ data_proc[ , names(data_proc)[sapply(data_proc, is.integer)]:=lapply(.SD,as.nume
            .SDcols = sapply(data_proc, is.integer)]
 str(data_proc)
 # since positions are alowed on the left hand side of :=, the 
-# whichi operator also helps here 
-data_proc[ , which(sapply(data_proc, is.integer)):=lapply(.SD,as.numeric),
-           .SDcols = sapply(data_proc, is.integer)]
+# the which operator also helps here 
+# data_proc[ , which(sapply(data_proc, is.integer)):=lapply(.SD,as.numeric),
+#            .SDcols = sapply(data_proc, is.integer)]
 
 
 # We drop off a couple of variables with non interest for our goal
@@ -187,7 +188,7 @@ str(data_proc)
 
 # Binary encoding our factor variables (needed for most algos)
 
-data_ready<-caret::dummyVars(" ~ .", data = data_proc, fullRank=T,sep = "_")
+data_ready<-caret::dummyVars(formula= ~., data = data_proc, fullRank=T,sep = "_")
 data_ready<-data.table(predict(data_ready, newdata = data_proc))
 
 names(data_ready)<-gsub('-','_',names(data_ready))

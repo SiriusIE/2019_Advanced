@@ -2,8 +2,7 @@
 
 # 1. Tree Based Models
 # 2. Regression
-# 3. Neural Networks
-source('Classification/code/carga_librerias.R')
+source('Regression/code/load_libraries.R')
 source('Regression/code/f_partition.R')
 source('Regression/code/regression_metrics.R')
 
@@ -31,6 +30,11 @@ tree_0<-rpart(formula = formula, data = whole_data$train, method = 'anova', mode
 
 print(tree_0)
 summary(tree_0)
+
+objects(tree_0)
+tree_0$frame
+tree_0$control
+tree_0$variable.importance
 
 rpart.plot(tree_0, digits = 4,type = 2,box.palette = 'Gn')
 
@@ -97,7 +101,7 @@ str(df_pred)
 ggplot(melt(df_pred, id.vars = 'id'), aes(x=id,y=value, colour=variable))+
   geom_point(alpha=0.65)+geom_line(alpha=0.65)+
   ylim(0,50000)+xlab('')+ylab('$')+
-  ggtitle('Regression Tree - Test Prediction on Automobile Price')+
+  ggtitle('Boosted Tree - Test Prediction on Automobile Price')+
   scale_colour_manual(values = c('black','red','blue','forestgreen'))
 
 
@@ -117,6 +121,10 @@ lm_0<-stepAIC(lm(formula = formula,
 
 summary(lm_0)
 
+summary(stepAIC(lm(formula = formula, 
+                   data=data.frame(scale(whole_data$train))),
+                trace=F))
+
 
 test_lm<-predict(lm_0, newdata = whole_data$test)
 
@@ -126,31 +134,37 @@ str(df_pred)
 ggplot(melt(df_pred, id.vars = 'id'), aes(x=id,y=value, colour=variable))+
   geom_point(alpha=0.65)+geom_line(alpha=0.65)+
   ylim(0,50000)+xlab('')+ylab('$')+
-  ggtitle('Regression Tree - Test Prediction on Automobile Price')+
+  ggtitle('Linear Regression - Test Prediction on Automobile Price')+
   scale_colour_manual(values = c('black','red','blue','forestgreen','orange'))
 
 
 rmse_lm<-rmse(real=whole_data$test$price, predicted = test_lm)
 mae_lm<-mae(real=whole_data$test$price, predicted = test_lm)
 mape_lm<-mape(real=whole_data$test$price, predicted = test_lm)
-mae_lm/mean(whole_data$test$price)
+mape_lm
 
 #### 2.2 Regression with regularization
 library(glmnet)
 
-glmnet_0<-cv.glmnet(x = data.matrix(whole_data$train[, !'price']), 
+glmnet_cv<-cv.glmnet(x = data.matrix(whole_data$train[, !'price']),
+                     nfolds = 5,
+                     y = whole_data$train[['price']],
+                     alpha=1,
+                     family = 'gaussian',
+                     standardize = TRUE)
+plot.cv.glmnet(glmnet_cv)
+
+glmnet_0<-glmnet(x = data.matrix(whole_data$train[, !'price']), 
                  y = whole_data$train[['price']],
                  family = 'gaussian',
-                 alpha=1)
-glmnet_0<-glmnet(x = data.matrix(whole_data$train[, !'price']), 
-                    y = whole_data$train[['price']],
-                    family = 'gaussian',
-                    alpha=1, lambda = glmnet_0$lambda.min)
+                 alpha=1, lambda = glmnet_cv$lambda.min)
 
 glmnet_0
 
 print(glmnet_0)
-
+objects(glmnet_0)
+glmnet_0$beta
+glmnet_0$a0
 
 test_glmnet<-predict(glmnet_0, newx = as.matrix(whole_data$test[, !'price']),s = 0)
 
@@ -160,14 +174,14 @@ str(df_pred)
 ggplot(melt(df_pred, id.vars = 'id'), aes(x=id,y=value, colour=variable))+
   geom_point(alpha=0.65)+geom_line(alpha=0.65)+
   ylim(0,50000)+xlab('')+ylab('$')+
-  ggtitle('Regression Tree - Test Prediction on Automobile Price')+
+  ggtitle('Lasso Regression - Test Prediction on Automobile Price')+
   scale_colour_manual(values = c('black','red','blue','forestgreen','orange','gray'))
 
 
 rmse_glmnet<-rmse(real=whole_data$test$price, predicted = test_glmnet)
 mae_glmnet<-mae(real=whole_data$test$price, predicted = test_glmnet)
 mape_glmnet<-mape(real=whole_data$test$price, predicted = test_glmnet)
-mae_glmnet/mean(whole_data$test$price)
+mape_glmnet
 
 
 #### 2.3 Boosting Regression
@@ -177,10 +191,10 @@ library(xgboost)
 # 
 
 xgb_reg_0<-xgboost(booster='gblinear',
-               data=as.matrix(whole_data$train[, !'price', with=F]),
-               label=whole_data$train$price,
-               nrounds = 50,
-               objective='reg:linear')
+                   data=as.matrix(whole_data$train[, !'price', with=F]),
+                   label=whole_data$train$price,
+                   nrounds = 50,
+                   objective='reg:linear')
 print(xgb_reg_0)
 
 test_xgb_reg<-predict(xgb_reg_0, newdata = as.matrix(whole_data$test[, !'price', with=F]), type='response')
@@ -191,45 +205,16 @@ str(df_pred)
 ggplot(melt(df_pred, id.vars = 'id'), aes(x=id,y=value, colour=variable))+
   geom_point(alpha=0.65)+geom_line(alpha=0.65)+
   ylim(0,50000)+xlab('')+ylab('$')+
-  ggtitle('Regression Tree - Test Prediction on Automobile Price')+
+  ggtitle('Boosted Regression - Test Prediction on Automobile Price')+
   scale_colour_manual(values = c('black','red','blue','forestgreen','orange','gray','palegreen'))
 
 
 rmse_xgb_reg<-rmse(real=whole_data$test$price, predicted = test_xgb_reg)
 mae_xgb_reg<-mae(real=whole_data$test$price, predicted = test_xgb_reg)
 mape_xgb_reg<-mape(real=whole_data$test$price, predicted = test_xgb_reg)
-mae_xgb_reg/mean(whole_data$test$price)
+mape_xgb_reg
 
 
-df_pred
-
-#### 3. Neural Networks
-library(neuralnet)
-
-nnet_0<-neuralnet(formula = formula, 
-                 data=whole_data$train,
-                 hidden=3,
-                 linear.output = FALSE)
-
-plot(nnet_0)
-
-
-test_nnet<-predict(nnet_0, newdata = whole_data$test)
-
-df_pred<-cbind(df_pred, test_nnet)
-str(df_pred)
-
-ggplot(melt(df_pred, id.vars = 'id'), aes(x=id,y=value, colour=variable))+
-  geom_point(alpha=0.65)+geom_line(alpha=0.65)+
-  ylim(0,50000)+xlab('')+ylab('$')+
-  ggtitle('Regression Tree - Test Prediction on Automobile Price')+
-  scale_colour_manual(values = c('black','red','blue','forestgreen','orange'))
-
-
-rmse_nnet<-rmse(real=whole_data$test$price, predicted = test_nnet)
-mae_nnet<-mae(real=whole_data$test$price, predicted = test_nnet)
-mape_nnet<-mape(real=whole_data$test$price, predicted = test_nnet)
-mae_nnet/mean(whole_data$test$price)
 
 
 # model evaluation

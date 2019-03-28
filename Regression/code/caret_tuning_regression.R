@@ -1,9 +1,4 @@
-# ML for continuous target variable
-
-# 1. Tree Based Models
-# 2. Regression
-# 3. Neural Networks
-
+# Hyperparameter tuning with caret
 source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/code/carga_librerias.R')
 source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/f_partition.R')
 source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/regression_metrics.R')
@@ -31,9 +26,12 @@ library(caret)
 formula<-as.formula(price~.) 
 
 
-tuneGrid=data.table(expand.grid(mtry=unique(rev(floor(ncol(whole_data$train)/c(10,20)))),
+tuneGrid=data.table(expand.grid(mtry=unique(rev(floor((ncol(whole_data$train)-1)/seq(1.1,5)))),
                                 splitrule='variance',
-                                min.node.size=c(10,20)))
+                                min.node.size=seq(2,20,2)))
+dim(tuneGrid)
+tuneGrid
+
 ctrl <- trainControl(
   method = "cv"
 )
@@ -49,10 +47,14 @@ rangerFit <- train(
   preProc = c("center", "scale"),
   tuneGrid = tuneGrid,
   trControl = ctrl,
-  metric = "RMSE"
+  metric = "MAE"
 )
 print(now()-ini)
 
 rangerFit
 
 rangerFit$bestTune
+
+plot(rangerFit)
+
+
