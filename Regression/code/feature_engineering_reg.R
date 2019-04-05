@@ -52,8 +52,7 @@ str(data_proc)
 data_proc[ , names(data_proc)[sapply(data_proc, is.integer)]:=lapply(.SD,as.numeric),
            .SDcols = sapply(data_proc, is.integer)]
 str(data_proc)
-# since positions are alowed on the left hand side of :=, the 
-# the which operator also helps here 
+# since positions are alowed on the left hand side of :=, the which operator also helps here 
 # data_proc[ , which(sapply(data_proc, is.integer)):=lapply(.SD,as.numeric),
 #            .SDcols = sapply(data_proc, is.integer)]
 

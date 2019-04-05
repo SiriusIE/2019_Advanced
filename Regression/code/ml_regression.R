@@ -2,11 +2,11 @@
 
 # 1. Tree Based Models
 # 2. Regression
-source('Regression/code/load_libraries.R')
-source('Regression/code/f_partition.R')
-source('Regression/code/regression_metrics.R')
+source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/load_libraries.R')
+source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/f_partition.R')
+source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/regression_metrics.R')
 
-whole_data<-f_partition(df=fread('Datasets/data_automobile_ready.csv'),
+whole_data<-f_partition(df=fread('/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/data_automobile_ready.csv'),
                         test_proportion = 0.2,
                         seed = 872367823)
 
@@ -14,7 +14,7 @@ whole_data<-f_partition(df=fread('Datasets/data_automobile_ready.csv'),
 str(whole_data)
 
 whole_data<-lapply(whole_data, function(x){
-  return(x[, names(x)[sapply(x,is.integer)]:=lapply(.SD, as.numeric), .SDcols=sapply(x,is.integer)])
+  return(x[, which(sapply(x, is.integer)):=lapply(.SD, as.numeric), .SDcols=sapply(x,is.integer)])
 })
 
 str(whole_data)
@@ -25,16 +25,11 @@ formula<-as.formula(price~.)   # price against all other variables
 
 #### 1.1 Base R Partitioning Tree 
 library(rpart)
+library(partykit)
 library(rpart.plot)
 tree_0<-rpart(formula = formula, data = whole_data$train, method = 'anova', model=TRUE)
 
-print(tree_0)
-summary(tree_0)
-
-objects(tree_0)
-tree_0$frame
-tree_0$control
-tree_0$variable.importance
+print(as.party(tree_0))
 
 rpart.plot(tree_0, digits = 4,type = 2,box.palette = 'Gn')
 
@@ -54,6 +49,12 @@ rmse_tree<-rmse(real=whole_data$test$price, predicted = test_tree)
 mae_tree<-mae(real=whole_data$test$price, predicted = test_tree)
 mape_tree<-mape(real=whole_data$test$price, predicted = test_tree)
 mape_tree
+
+
+# another type of partitioning trees, based on conditional inference tests
+ctree_0<-ctree(formula, data = whole_data$train)
+print(ctree_0)
+plot(ctree_0)
 
 
 #### 1.2 Random Forest
@@ -79,17 +80,27 @@ mae_rf<-mae(real=whole_data$test$price, predicted = test_rf)
 mape_rf<-mape(real=whole_data$test$price, predicted = test_rf)
 mape_rf
 
+# another library for random forest: ranger (faster)
+
+
+library(ranger)
+
+rf_1<-ranger(formula, whole_data$train)
+test_rf1<-predict(rf_1,whole_data$test)$predictions
+mape(real=whole_data$test$price, predicted = test_rf1)
+qplot(test_rf, test_rf1)
+
 
 #### 1.3 Boosting Tree
 library(xgboost)
 
-# for this algorithm we need to convert to a matrix first
-# 
+# for this algorithm we need to convert data to a matrix first
+
 
 xgb_0<-xgboost(booster='gbtree',
                data=as.matrix(whole_data$train[, !'price', with=F]),
                label=whole_data$train$price,
-               nrounds = 50,
+               nrounds = 10,
                objective='reg:linear')
 print(xgb_0)
 
@@ -108,7 +119,7 @@ ggplot(melt(df_pred, id.vars = 'id'), aes(x=id,y=value, colour=variable))+
 rmse_xgb<-rmse(real=whole_data$test$price, predicted = test_xgb)
 mae_xgb<-mae(real=whole_data$test$price, predicted = test_xgb)
 mape_xgb<-mape(real=whole_data$test$price, predicted = test_xgb)
-mae_xgb/mean(whole_data$test$price)
+mape_xgb
 
 
 
@@ -149,24 +160,25 @@ library(glmnet)
 glmnet_cv<-cv.glmnet(x = data.matrix(whole_data$train[, !'price']),
                      nfolds = 5,
                      y = whole_data$train[['price']],
-                     alpha=1,
+                     alpha=0,
                      family = 'gaussian',
                      standardize = TRUE)
 plot.cv.glmnet(glmnet_cv)
 
+glmnet_cv$lambda.min
+
 glmnet_0<-glmnet(x = data.matrix(whole_data$train[, !'price']), 
                  y = whole_data$train[['price']],
                  family = 'gaussian',
-                 alpha=1, lambda = glmnet_cv$lambda.min)
+                 alpha=0, lambda = glmnet_cv$lambda.min)
 
 glmnet_0
 
 print(glmnet_0)
-objects(glmnet_0)
 glmnet_0$beta
-glmnet_0$a0
 
-test_glmnet<-predict(glmnet_0, newx = as.matrix(whole_data$test[, !'price']),s = 0)
+test_glmnet<-predict(glmnet_0, newx = as.matrix(whole_data$test[, !'price']))
+test_glmnet
 
 df_pred<-cbind(df_pred, test_glmnet=test_glmnet[,1])
 str(df_pred)
@@ -193,7 +205,7 @@ library(xgboost)
 xgb_reg_0<-xgboost(booster='gblinear',
                    data=as.matrix(whole_data$train[, !'price', with=F]),
                    label=whole_data$train$price,
-                   nrounds = 50,
+                   nrounds = 100,
                    objective='reg:linear')
 print(xgb_reg_0)
 
@@ -229,3 +241,24 @@ result
 
 
 result[which.min(result$mape)]
+
+
+# interactive plotting
+library(ggiraph)
+p1<-ggplot(melt(df_fit, id.vars = 'id'), aes(x=id,y=value, colour=variable, tooltip=round(value)))+
+  geom_point_interactive(alpha=0.65)+geom_line_interactive(alpha=0.65)+
+  ylim(0,50000)+xlab('')+ylab('$')+
+  ggtitle('Regression Tree - Train Prediction on Automobile Price')+
+  scale_colour_manual(values = c('black','red'))
+
+p2<-ggplot(melt(df_pred, id.vars = 'id'), aes(x=id,y=value, colour=variable, tooltip=round(value)))+
+  geom_point_interactive(alpha=0.65)+geom_line_interactive(alpha=0.65)+
+  ylim(0,50000)+xlab('')+ylab('$')+
+  ggtitle('Regression Tree - Test Prediction on Automobile Price')+
+  scale_colour_manual(values = c('black','blue'))
+
+
+tooltip_css <- "background-color:lightgray;color:black;font-style:normal;padding:10px;border-radius:10px 20px 10px 20px;"
+
+ggiraph::ggiraph(code = {print(grid.arrange(p1,p2, ncol=1))},
+                 tooltip_extra_css = tooltip_css)
