@@ -1,6 +1,6 @@
 source('Classification/code/carga_librerias.R')
 
-raw_data<-fread('Datasets/bank-full.csv')
+raw_data<-fread('Datasets/Classification/bank-full.csv')
 
 raw_data[, day:=factor(day)]
 raw_data[, campaign:=factor(campaign)]

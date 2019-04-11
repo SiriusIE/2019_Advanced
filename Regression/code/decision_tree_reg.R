@@ -4,7 +4,7 @@ source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/f_partition.R
 source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/regression_metrics.R')
 
 
-whole_data<-f_partition(df=fread('/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/data_automobile_ready.csv'),
+whole_data<-f_partition(df=fread('/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/Regression/data_automobile_ready.csv'),
                         test_proportion = 0.2,
                         seed = 872367823)
 
@@ -55,8 +55,8 @@ library(visNetwork)
 
 visTree(tree_0)
 visTree(tree_0, fallenLeaves = T,
-        edgesFontSize = 14, 
-        nodesFontSize = 16, 
+        edgesFontSize = 24, 
+        nodesFontSize = 24, 
         legend = T,
         colorVar = RColorBrewer::brewer.pal(12,'Paired'),
         colorEdges = 'darkgray',

@@ -1,6 +1,6 @@
 source('Classification/code/carga_librerias.R')
 
-raw_data<-fread('Datasets/kc_house_data.csv')
+raw_data<-fread('Datasets/Regression/kc_house_data.csv')
 str(raw_data)
 raw_data<-raw_data[, !c('id','date')]
 
@@ -16,7 +16,7 @@ str(raw_data)
 str(df)
 
 set.seed(123)
-train_index<-sample(nrow(df),floor(nrow(df)*0.9))
+train_index<-sample(nrow(df),floor(nrow(df)*0.8))
 df_train<-df[train_index]
 df_test<-df[-train_index]
 

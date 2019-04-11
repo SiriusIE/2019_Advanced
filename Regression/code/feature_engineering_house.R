@@ -1,102 +1,124 @@
 source('Regression/code/load_libraries.R')
 
-raw_data<-fread('Datasets/Automobile.csv', stringsAsFactors = F)
+raw_data<-fread('Datasets/Regression/kc_house_data.csv', stringsAsFactors = T)
 str(raw_data)
 
+summary(raw_data$id)
 
-# Objective: predict the price of a car out of some of its features
+raw_data[, date:=as.Date(date, format='%m/%d/%Y')]
 
+summary(raw_data$date)
+
+# Objective: predict the price of a house out of some of its features
+
+str(raw_data)
 
 # We have character, integer and numeric variables
 # Some numeric variables are read as character
-# Use of the ? symbol to account for NAs
 
-# We will first will turn all "?" symbols into NA
 
-# function for vectorial substitution
-f_substitute<-function(x){
-  gsub(pattern = '\\?',replacement =  NA,x=x)
-}
+raw_data[, zipcode:=factor(zipcode)]
+raw_data[, condition:=factor(condition)]
+raw_data[, view:=factor(view)]
 
-cols<-names(raw_data)
-raw_data[ , (cols):=lapply(.SD,f_substitute)]
-str(raw_data)
 
-# or we can re-asign to raw_data, perhaps easier to read
-# raw_data<-raw_data[ , lapply(.SD,f_substitute)]
-# or we could even directly call the function gsub 
-# raw_data<-raw_data[ , lapply(.SD,gsub, pattern='\\?',replacement=NA)]
-# str(raw_data)
-
-# we write on a new csv
-raw_data<-fwrite(raw_data,'Datasets/Automobile_2.csv')
-# and read it again, now numbers will be read as numeric values
-data_proc<-fread('Datasets/Automobile_2.csv', stringsAsFactors = F)
+data_proc<-copy(raw_data)
 str(data_proc)
 
 
-# lets now turn characters into factors
-# still some integer variables...
+# we create a function that turns discrete variables into factors
 
-data_proc[ , names(data_proc)[sapply(data_proc, is.character)]:=lapply(.SD,as.factor),
-           .SDcols = names(data_proc)[sapply(data_proc, is.character)]]
-# or
-# data_proc[ , names(which(sapply(data_proc, is.character))):=lapply(.SD,as.factor),
-#            .SDcols = names(which(sapply(data_proc, is.character)))]
+data_proc[,sapply(data_proc,function(x) length(unique(x)))]
+data_proc[,which(sapply(data_proc,function(x) length(unique(x))<200)):=lapply(.SD, as.factor), 
+          .SDcols=sapply(data_proc,function(x) length(unique(x))<200)]
+
+
 str(data_proc)
 
-# and integers to numeric
-
-# actually in the .SDcols part you can specify the whole boolean vector of desired columns
-# but you can't do this on the left hand side of :=, where characters or positions are expected
-data_proc[ , names(data_proc)[sapply(data_proc, is.integer)]:=lapply(.SD,as.numeric),
+data_proc[ , which(sapply(data_proc, is.integer)):=lapply(.SD,as.numeric),
            .SDcols = sapply(data_proc, is.integer)]
-str(data_proc)
-# since positions are alowed on the left hand side of :=, the which operator also helps here 
-# data_proc[ , which(sapply(data_proc, is.integer)):=lapply(.SD,as.numeric),
-#            .SDcols = sapply(data_proc, is.integer)]
 
+str(data_proc)
 
 # We drop off a couple of variables with non interest for our goal
-data_proc[, c('symboling','losses'):=NULL]
+data_proc[, c('id'):=NULL]
 
 str(data_proc)
 
-# We analyze the counting per maker:
-sort(summary(data_proc$make), dec=T)/nrow(data_proc)
-p<-ggplot(data_proc, aes(x=make))+geom_bar(stat='count')+
+# We analyze the counting per bath:
+sort(summary(data_proc$bath), dec=T)/nrow(data_proc)
+p<-ggplot(data_proc, aes(x=bathrooms))+geom_bar(stat='count')+
   theme(axis.text.x = element_text(angle=45))
 p
 
 ggplotly(p)
 
-# lets re-order the factor levels of make in decreasing order
-data_proc[, make:=factor(make, levels=names(sort(summary(data_proc$make), dec=T)))]
-levels(data_proc$make)
+# lets re-order the factor levels of bath in decreasing order
+data_proc[, bathrooms:=factor(bathrooms, levels=names(sort(summary(data_proc$bathrooms), dec=T)))]
+levels(data_proc$bath)
 ggplotly(p)
 
-# We will create a label that will agregate into "others" those makers with less than 3% of share
-niche_cars<-names(which(summary(data_proc$make)/nrow(data_proc)<0.03))
-niche_cars
+# We will create a label that will agregate into "others" those bathrs with less than 3% of share
+niche_baths<-names(which(summary(data_proc$bath)/nrow(data_proc)<0.03))
+niche_baths
 
-data_proc[, make_agg:=as.factor(ifelse(make%in%niche_cars,'others',as.character(make)))]
+data_proc[, bath_agg:=as.factor(ifelse(bathrooms%in%niche_baths,'others',as.character(bathrooms)))]
 
-summary(data_proc$make)/nrow(data_proc)
-summary(data_proc$make_agg)/nrow(data_proc)
-sum(summary(data_proc$make_agg)/nrow(data_proc)) 
+summary(data_proc$bathrooms)/nrow(data_proc)
+summary(data_proc$bath_agg)/nrow(data_proc)
+sum(summary(data_proc$bath_agg)/nrow(data_proc)) 
 
-data_proc[, length(levels(make_agg))]
-data_proc[, length(levels(make))]
-data_proc[, length(levels(make_agg))/length(levels(make))-1] # important reduction in factor cathegories
+data_proc[, length(levels(bath_agg))]
+data_proc[, length(levels(bathrooms))]
+data_proc[, length(levels(bath_agg))/length(levels(bathrooms))-1] # important reduction in factor cathegories
 
 
-data_proc[, make_agg:=factor(make_agg, levels=names(sort(summary(data_proc$make_agg), dec=T)))]
-p<-ggplot(data_proc, aes(x=make_agg))+geom_bar(stat='count')+
+data_proc[, bath_agg:=factor(bath_agg, levels=names(sort(summary(data_proc$bath_agg), dec=T)))]
+p<-ggplot(data_proc, aes(x=bath_agg))+geom_bar(stat='count')+
   theme(axis.text.x = element_text(angle=45))
 ggplotly(p)
 
-# we drop off the former make variable
-data_proc[, make:=NULL]
+# we drop off the former bath variable
+data_proc[, bathrooms:=NULL]
+
+# same with bedrooms
+
+niche_beds<-names(which(summary(data_proc$bed)/nrow(data_proc)<0.005))
+niche_beds
+
+data_proc[, bed_agg:=as.factor(ifelse(bedrooms%in%niche_beds,'others',as.character(bedrooms)))]
+
+summary(data_proc$bed_agg)
+
+data_proc[, bedrooms:=NULL]
+
+# same for yr_built:
+p<-ggplot(data_proc, aes(x=yr_built))+geom_bar(stat='count')+
+  theme(axis.text.x = element_text(angle=45))
+ggplotly(p)
+
+# we'll agreggate by decade
+
+data_proc[, decade_built:=factor(substr(as.character(yr_built),1,3))]
+
+p<-ggplot(data_proc, aes(x=decade_built))+geom_bar(stat='count')+
+  theme(axis.text.x = element_text(angle=45))
+ggplotly(p)
+
+data_proc[, yr_built:=NULL]
+
+data_proc[, decade_renov:=factor(substr(as.character(yr_renovated),1,3))]
+
+p<-ggplot(data_proc, aes(x=decade_renov))+geom_bar(stat='count')+
+  theme(axis.text.x = element_text(angle=45))
+ggplotly(p)
+
+data_proc[, yr_renovated:=NULL]
+
+
+str(data_proc)
+
+
 
 
 #### summary
@@ -105,29 +127,13 @@ str(data_proc)  # ...just numeric & factor variables
 sum(sapply(data_proc, is.numeric))
 sum(sapply(data_proc, is.factor))
 
+data_proc[, date:=NULL]
+
 
 
 #### NA treatment
 
 sum(is.na(data_proc))
-
-
-# We first delete every row where price is missing
-nrow(data_proc)
-data_proc<-data_proc[!is.na(price)]
-nrow(data_proc)
-
-# plotting our problem
-library(Amelia)
-suppressWarnings(
-  missmap(data_proc, legend = F, col=c('black', 'lightgray'))
-); grid(col='azure4')
-
-sapply(data_proc, function(x) sum(is.na(x)))
-
-# NAs are just a few and concentrated in stroke & hp variables
-data_proc<-data_proc[complete.cases(data_proc)]
-nrow(data_proc)
 
 
 
@@ -145,15 +151,6 @@ ggplot(data.table(var=names(cv_numeric_variables),cv=cv_numeric_variables),
        aes(var,fill=cv))+geom_bar()+coord_polar()+scale_fill_gradient(low='white', high = 'black')
 
 
-summary(data_proc[, numeric_variables[cv_numeric_variables<0.1], with=F])
-
-df<-data_proc[, numeric_variables[cv_numeric_variables<0.1], with=F]
-sapply(df, function(x) sd(x)/mean(x))
-df<-data.frame(scale(df))
-df<-melt(df)
-ggplot(df, aes(x=variable, y=scale(value)))+geom_boxplot()+geom_jitter(alpha=.25)+
-  theme(axis.text.x = element_text(angle=45))
-
 
 # allright!!!
 
@@ -164,10 +161,10 @@ count_factor_variables<-sapply(data_proc[,factor_variables, with=F], summary)
 count_factor_variables
 
 # lets define a rule... if a label weight less than 10% goes into the "others" bag:
-f_other<-function(var){
+f_other<-function(var,p){
   
   count_levels<-summary(var)/length(var)
-  to_bag<-names(which(count_levels<0.1))
+  to_bag<-names(which(count_levels<p))
   
   reduced_var<-as.factor(ifelse(as.character(var)%in%to_bag,'others',as.character(var)))
   
@@ -175,7 +172,7 @@ f_other<-function(var){
 }
 
 # and we apply the function to our factor variables
-data_proc[, (factor_variables):=lapply(.SD, f_other), .SDcols=factor_variables]
+data_proc[, (factor_variables):=lapply(.SD, f_other,p=0.01), .SDcols=factor_variables]
 
 sapply(data_proc[,factor_variables, with=F], summary)
 
@@ -196,6 +193,29 @@ str(data_proc)
 str(data_ready)
 
 
-fwrite(data_ready, 'Datasets/data_automobile_ready.csv', row.names = F)
+fwrite(data_ready, 'Datasets/Regression/data_house_ready.csv', row.names = F)
+
+# data partition for individual project
+data_ready<-fread('Datasets/Regression/data_house_ready.csv')
+source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/f_partition.R')
+whole_data<-f_partition(df=fread('/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/Regression/kc_house_data.csv'),
+                        test_proportion = 0.2,
+                        seed = 872367823)
+
+plot(whole_data$test$price)
 
 
+lapply(whole_data, dim)
+
+
+fwrite(whole_data)
+
+
+# geo-analysis
+library(leaflet)
+
+m<-leaflet(data=raw_data)%>%addTiles()%>%addCircleMarkers(lat=~lat, lng=~long,
+                                                          radius=0.5,
+                                                          color = 'gray',
+                                                          opacity = 0.25,label = ~price)
+print(m)
