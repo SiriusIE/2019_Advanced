@@ -7,13 +7,13 @@ source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/code/carga_lib
 source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/f_partition.R')
 
 
-df<-fread('/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/Classification/data_bank_ready.csv')
+df<-fread('/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/Classification/data_heart_ready.csv')
 
 whole_data<-f_partition(df=df,
                         test_proportion = 0.2,
                         seed = 872367823)
 
-whole_data<-lapply(whole_data,function(x) setnames(x,'y_yes','target')) 
+whole_data<-lapply(whole_data,function(x) setnames(x,'target_1','target')) 
 
 str(whole_data)
 
@@ -230,4 +230,24 @@ result[which.max(result$precission)]
 result[which.max(result$accuracy)]
 result[which.max(result$auc)]
 
-saveRDS(result,'/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/bank_results.RData')
+saveRDS(result,'/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/heart_results.RData')
+
+# visualization of predicted probability for each class
+
+df_prob<-cbind(df_pred[, .(id, output)], test_tree, test_glm, test_rf, test_xgb, test_glmnet)
+
+ggplot(df_prob, aes(x=test_rf, fill=output, colour=output))+geom_density(alpha=0.5)+
+  scale_colour_manual(values = c('gray','royalblue'))+
+  scale_fill_manual(values = c('gray','royalblue'))+geom_vline(xintercept = 0.5)
+
+ggplot(df_prob, aes(x=test_xgb, fill=output, colour=output))+geom_density(alpha=0.5)+
+  scale_colour_manual(values = c('gray','royalblue'))+
+  scale_fill_manual(values = c('gray','royalblue'))+geom_vline(xintercept = 0.5)
+
+
+df_prob_melt<-melt(df_prob, id.vars = c('id','output'))
+df_prob_melt
+
+
+ggplot(df_prob_melt[output==TRUE], aes(x=value, colour=variable))+geom_density(alpha=0.5)
+ggplot(df_prob_melt, aes(x=value, colour=variable))+geom_density(alpha=0.5)+facet_grid(~output)
