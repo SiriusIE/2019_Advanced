@@ -3,7 +3,7 @@ source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/code/carga_lib
 source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/f_partition.R')
 source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/code/classification_metrics.R')
 
-df<-fread('/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/Classification/data_bank_ready.csv')
+df<-fread('/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/Classification/data_credit_ready.csv')
 
 whole_data<-f_partition(df=df,
                         test_proportion = 0.2,
@@ -103,6 +103,8 @@ df_pred<-cbind(df_pred, test_rf=factor(test_rf>=0.5),
                test_rf_smote=factor(test_rf_smote>=0.5))
 
 
+df_pred
+
 f_metrics(real=df_pred$output, predicted = test_rf, t=0.5)
 f_metrics(real=df_pred$output, predicted = test_rf_under, t=0.5)
 f_metrics(real=df_pred$output, predicted = test_rf_over, t=0.5)
@@ -112,9 +114,11 @@ result<-t(sapply(df_pred[, -c('id','output')], function(x) f_metrics_simple(real
 
 
 
+result
 
+# lets get more metrics to compare
 
-
+confusionMatrix(data = df_pred$test_rf, reference=df_pred$output, positive='TRUE')
 
 
 
