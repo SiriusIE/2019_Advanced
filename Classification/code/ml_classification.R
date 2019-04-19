@@ -7,13 +7,13 @@ source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/code/carga_lib
 source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/f_partition.R')
 
 
-df<-fread('/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/Classification/data_heart_ready.csv')
+df<-fread('/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/Classification/data_bank_ready.csv')
 
 whole_data<-f_partition(df=df,
                         test_proportion = 0.2,
                         seed = 872367823)
 
-whole_data<-lapply(whole_data,function(x) setnames(x,'target_1','target'))
+whole_data<-lapply(whole_data,function(x) setnames(x,'y_yes','target')) 
 
 str(whole_data)
 
@@ -230,7 +230,4 @@ result[which.max(result$precission)]
 result[which.max(result$accuracy)]
 result[which.max(result$auc)]
 
-
-
-
-
+saveRDS(result,'/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/bank_results.RData')

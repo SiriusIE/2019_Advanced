@@ -4,6 +4,8 @@ f_metrics<-function(real,predicted, t=0.5){
   cf<-table(predicted=factor(predicted>=t),real=real)
   print(cf)
   
+  colnames(cf)<-c('FALSE','TRUE')
+  
   TP<-cf['TRUE','TRUE']
   FN<-cf['FALSE','TRUE']
   TN<-cf['FALSE','FALSE']
