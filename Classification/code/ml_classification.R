@@ -7,13 +7,13 @@ source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/code/carga_lib
 source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/f_partition.R')
 
 
-df<-fread('/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/Classification/data_bank_ready.csv')
+df<-fread('/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/Classification/data_credit_ready.csv')
 
 whole_data<-f_partition(df=df,
                         test_proportion = 0.2,
                         seed = 872367823)
 
-whole_data<-lapply(whole_data,function(x) setnames(x,'y_yes','target')) 
+whole_data<-lapply(whole_data,function(x) setnames(x,'target_1','target')) 
 
 str(whole_data)
 
@@ -262,8 +262,6 @@ f_plot_roc(real=df_pred$output, predicted=test_rf, title='test rf')
 # geting roc points manually out of sensitivity and specificity
 manual_roc<-data.table(t=seq(0.1,0.9,0.0001),
                        t(sapply(seq(0.1,0.9,0.0001),f_roc_point,real=df_pred$output, predicted=test_rf)))
-manual_roc<-merge(manual_roc,data.table(t=seq(0.1,0.9,0.0001),
-                       t(sapply(seq(0.1,0.9,0.0001),f_roc_point,real=df_pred$output, predicted=test_glmnet))))
 
 ggplot(manual_roc, aes(x=1-specificity, y=sensitivity))+geom_point()
 
@@ -280,12 +278,12 @@ f_manual_roc<-function(t_seq=seq(0.1,0.9,0.0001), method){
 f_manual_roc(method='test_rf')
 
 
-roc_results<-rbindlist(lapply(c('test_tree','test_rf','test_glmnet', 'test_xgb'), function(x) f_manual_roc(method=x)))
+roc_results<-rbindlist(lapply(c('test_rf','test_xgb'), function(x) f_manual_roc(method=x,t_seq=seq(0.1,0.9,0.0001))))
 
 roc_results
 
-ggplot(roc_results, aes(x=1-specificity, y=sensitivity, colour=method))+geom_path()+geom_point(size=0.5)+
+ggplot(roc_results, aes(x=1-specificity, y=sensitivity, colour=method))+geom_path(size=1)+
   geom_abline(slope=1, col='gray')+xlim(0,1)+ylim(0,1)
 
-plot(seq(0.1,0.9,0.0001),roc_results[method=='test_glmnet']$specificity, type='l')
-plot(seq(0.1,0.9,0.0001),roc_results[method=='test_glmnet']$sensitivity, type='l')
+plot(t=seq(0.1,0.9,0.0001),roc_results[method=='test_rf']$specificity, type='l')
+plot(t=seq(0.1,0.9,0.0001),roc_results[method=='test_rf']$sensitivity, type='l')
