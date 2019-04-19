@@ -16,6 +16,7 @@ f_metrics<-function(real,predicted, t=0.5){
   specificity<-TN/(TN+FP)
   accuracy<-(TP+TN)/(TN+FP+TP+FN)
   precission<-TP/(TP+FP)
+  f1_score<-(2*precission*sensitivity)/(precission+sensitivity)
   
   auc<-as.numeric(pROC::roc(response=real,
                       predictor=predicted)$auc)
@@ -24,6 +25,7 @@ f_metrics<-function(real,predicted, t=0.5){
               specificity=specificity,
               accuracy=accuracy,
               precission=precission,
+              f1_score=f1_score,
               auc=auc))
 }
 
@@ -42,11 +44,14 @@ f_metrics_simple<-function(real,predicted){
   specificity<-TN/(TN+FP)
   accuracy<-(TP+TN)/(TN+FP+TP+FN)
   precission<-TP/(TP+FP)
+  f1_score<-(2*precission*sensitivity)/(precission+sensitivity)
+  
   
   return(list(sensitivity=sensitivity,
               specificity=specificity,
               accuracy=accuracy,
-              precission=precission))
+              precission=precission,
+              f1_score=f1_score))
 }
 
 f_roc_point<-function(real,predicted,t){
