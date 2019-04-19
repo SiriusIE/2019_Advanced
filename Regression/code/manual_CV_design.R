@@ -1,7 +1,7 @@
 
 # Manual CV
 
-source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/code/carga_librerias.R')
+source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/code/load_libraries.R')
 source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/f_partition.R')
 source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/regression_metrics.R')
 
