@@ -9,7 +9,7 @@ options(scipen = 999)
 theme_set(theme_minimal(base_size = 16))
 library(ggrepel)
 library(ggiraph)
-library(ggplotly)
+library(plotly)
 
 
 

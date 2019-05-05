@@ -3,11 +3,11 @@
 # 1. Tree Based Models
 # 2. Logistic Regression Models
 
-source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/code/carga_librerias.R')
+source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/code/load_libraries.R')
 source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/f_partition.R')
 
 
-df<-fread('/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/Classification/data_credit_ready.csv')
+df<-fread('/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/Classification/data_heart_ready.csv')
 
 whole_data<-f_partition(df=df,
                         test_proportion = 0.2,
@@ -167,7 +167,9 @@ library(glmnet)
 glmnet_0<-cv.glmnet(x = data.matrix(whole_data$train[, !'target']), 
                     y = factor(whole_data$train[['target']]==1),
                     family = 'binomial',
-                    alpha=1)
+                    alpha=1,
+                    lambda = seq(0,0.01,0.0001))
+print(glmnet_0$lambda.min)
 glmnet_0<-glmnet(x = data.matrix(whole_data$train[, !'target']), 
                  y = factor(whole_data$train[['target']]==1),
                  family = 'binomial',
@@ -189,13 +191,11 @@ f_plot_roc(real=df_pred$output, predicted=test_glmnet, title='test glmnet')
 #### 2.3 Boosting Logistic Regression
 library(xgboost)
 
-# for this algorithm we need to convert to a matrix first
-# 
 
 xgb_reg_0<-xgboost(booster='gblinear',
                    data=as.matrix(whole_data$train[, !'target', with=F]),
                    label=whole_data$train[['target']]==1,
-                   nrounds = 100,
+                   nrounds = 200,
                    objective='binary:logistic')
 print(xgb_reg_0)
 
@@ -218,8 +218,7 @@ result<-data.table(method=c('tree','rf','xgb','glm','glmnet','xgb_reg'),
 
 
 prob_pred<-cbind(df_pred[, .(output)],test_tree, test_rf,test_xgb, test_glm, test_glmnet, test_xgb_reg)
-result<-cbind(result, unlist(sapply(prob_pred[,!c('output')], f_metrics, real=df_pred$output,t=0.5)['auc',]))
-setnames(result, 'V2','auc')
+result<-cbind(result, auc=unlist(sapply(prob_pred[,!c('output')], f_metrics, real=df_pred$output,t=0.5)['auc',]))
 
 print(result)
 
@@ -230,7 +229,9 @@ result[which.max(result$precission)]
 result[which.max(result$accuracy)]
 result[which.max(result$auc)]
 
-saveRDS(result,'/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/heart_results.RData')
+saveRDS(result,'/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/credit_results.RData')
+
+
 
 # visualization of predicted probability for each class
 
@@ -252,6 +253,9 @@ df_prob_melt
 ggplot(df_prob_melt[output==TRUE], aes(x=value, colour=variable))+geom_density(alpha=0.5)
 ggplot(df_prob_melt, aes(x=value, colour=variable))+geom_density(alpha=0.5)+facet_grid(~output)
 
+
+
+
 # plotting several rocs on the same graph
 
 
@@ -260,11 +264,15 @@ f_plot_roc(real=df_pred$output, predicted=test_rf, title='test rf')
 
 
 # geting roc points manually out of sensitivity and specificity
+
+# example for one method
 manual_roc<-data.table(t=seq(0.1,0.9,0.0001),
                        t(sapply(seq(0.1,0.9,0.0001),f_roc_point,real=df_pred$output, predicted=test_rf)))
 
 ggplot(manual_roc, aes(x=1-specificity, y=sensitivity))+geom_point()
 
+
+# we put it in a function...
 f_manual_roc<-function(t_seq=seq(0.1,0.9,0.0001), method){
   
   manual_roc<-data.table(method=method,
@@ -274,16 +282,20 @@ f_manual_roc<-function(t_seq=seq(0.1,0.9,0.0001), method){
   return(manual_roc)
 }
 
-
+# testing our function
 f_manual_roc(method='test_rf')
 
 
-roc_results<-rbindlist(lapply(c('test_rf','test_xgb'), function(x) f_manual_roc(method=x,t_seq=seq(0.1,0.9,0.0001))))
+# and we apply the function to our collection of methods trained
+threshold_seq<-seq(0.05,0.95,0.01)
+methods<-c('test_rf','test_xgb', 'test_glm')
+roc_results<-lapply(methods, function(x) f_manual_roc(method=x,t_seq=threshold_seq))
 
-roc_results
+roc_results<-rbindlist(roc_results)
 
 ggplot(roc_results, aes(x=1-specificity, y=sensitivity, colour=method))+geom_path(size=1)+
   geom_abline(slope=1, col='gray')+xlim(0,1)+ylim(0,1)
 
-plot(t=seq(0.1,0.9,0.0001),roc_results[method=='test_rf']$specificity, type='l')
-plot(t=seq(0.1,0.9,0.0001),roc_results[method=='test_rf']$sensitivity, type='l')
+par(mfrow=c(1,2))
+plot(x=threshold_seq,roc_results[method=='test_rf']$specificity, type='l', xlab='t', ylab='sensitivity'); grid()
+plot(x=threshold_seq,roc_results[method=='test_rf']$sensitivity, type='l', xlab='t', ylab='specificity'); grid()
