@@ -6,7 +6,7 @@ source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/load_librarie
 source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/f_partition.R')
 source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/regression_metrics.R')
 
-whole_data<-f_partition(df=fread('/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/Regression/data_black_ready.csv'),
+whole_data<-f_partition(df=fread('/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/Regression/data_house_ready.csv'),
                         test_proportion = 0.1,
                         seed = 872367823)
 
@@ -21,16 +21,60 @@ str(whole_data)
 
 
 # we start defining a formula
-formula<-as.formula(Purchase~.)   # price against all other variables
+formula<-as.formula(price~.)   # price against all other variables
 
 
-library(ranger)
 
-rf_1<-ranger(formula, whole_data$train)
-test_rf1<-predict(rf_1,whole_data$test)$predictions
-mape(real=whole_data$test$price, predicted = test_rf1)
-qplot(test_rf, test_rf1)
+#### 1.1 Base R Partitioning Tree 
+library(rpart)
+library(rpart.plot)
+tree_0<-rpart(formula = formula, data = whole_data$train, method = 'anova', model=TRUE)
 
+print(tree_0)
+summary(tree_0)
+
+rpart.plot(tree_0, digits = 4,type = 2,box.palette = 'Gn')
+
+test_tree<-predict(tree_0, newdata = whole_data$test,type = 'vector')
+
+df_pred<-whole_data$test[, .(id=1:.N,price, test_tree)]
+str(df_pred)
+
+ggplot(melt(df_pred, id.vars = 'id'), aes(x=id,y=value, colour=variable))+
+  geom_point(alpha=0.65)+geom_line(alpha=0.65)+
+  ylim(0,50000)+xlab('')+ylab('$')+
+  ggtitle('Regression Tree - Test Prediction on Automobile Price')+
+  scale_colour_manual(values = c('black','red'))
+
+
+rmse_tree<-rmse(real=whole_data$test$price, predicted = test_tree)
+mae_tree<-mae(real=whole_data$test$price, predicted = test_tree)
+mape_tree<-mape(real=whole_data$test$price, predicted = test_tree)
+mape_tree
+
+
+#### 1.2 Random Forest
+library(randomForest)
+
+rf_0<-randomForest(formula=formula, data=whole_data$train)
+print(rf_0)
+
+test_rf<-predict(rf_0, newdata = whole_data$test, type='response')
+
+df_pred<-cbind(df_pred, test_rf)
+str(df_pred)
+
+ggplot(melt(df_pred, id.vars = 'id'), aes(x=id,y=value, colour=variable))+
+  geom_point(alpha=0.65)+geom_line(alpha=0.65)+
+  ylim(0,50000)+xlab('')+ylab('$')+
+  ggtitle('Random Forest - Test Prediction on Automobile Price')+
+  scale_colour_manual(values = c('black','red','blue'))
+
+
+rmse_rf<-rmse(real=whole_data$test$price, predicted = test_rf)
+mae_rf<-mae(real=whole_data$test$price, predicted = test_rf)
+mape_rf<-mape(real=whole_data$test$price, predicted = test_rf)
+mape_rf
 
 #### 1.3 Boosting Tree
 library(xgboost)

@@ -119,6 +119,8 @@ data_proc[, yr_renovated:=NULL]
 str(data_proc)
 
 
+fwrite(data_proc, 'Datasets/Regression/data_house_viz.csv')
+
 
 
 #### summary
@@ -194,21 +196,6 @@ str(data_ready)
 
 
 fwrite(data_ready, 'Datasets/Regression/data_house_ready.csv', row.names = F)
-
-# data partition for individual project
-data_ready<-fread('Datasets/Regression/data_house_ready.csv')
-source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/f_partition.R')
-whole_data<-f_partition(df=fread('/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/Regression/kc_house_data.csv'),
-                        test_proportion = 0.2,
-                        seed = 872367823)
-
-plot(whole_data$test$price)
-
-
-lapply(whole_data, dim)
-
-
-fwrite(whole_data)
 
 
 # geo-analysis
