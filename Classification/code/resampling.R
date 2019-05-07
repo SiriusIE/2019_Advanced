@@ -9,7 +9,7 @@ whole_data<-f_partition(df=df,
                         test_proportion = 0.2,
                         seed = 872367823)
 
-whole_data<-lapply(whole_data,function(x) setnames(x,'y_yes','target')) 
+# whole_data<-lapply(whole_data,function(x) setnames(x,'y_yes','target')) 
 
 str(whole_data)
 
@@ -20,7 +20,8 @@ summary(whole_data$test$target)
 
 # let's load our benchmarking results
 
-result<-readRDS('/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/bank_results.RData')
+result<-readRDS('/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/credit_results.RData')
+print(result)
 
 
 
@@ -49,7 +50,7 @@ sum(whole_data$train$target==0)*2
 library(DMwR)
 
 x<-copy(whole_data$train)
-x[, target:=factor(target==1)]
+x[, target:=factor(target==1)]  # we make sure the target variable is defined as a factor
 
 set.seed(9560)
 ini<-now()
@@ -57,7 +58,10 @@ smote_train <- data.table(SMOTE(target ~ ., data  = data.frame(x)))
 print(now()-ini)
 table(smote_train$target) 
 
-result
+
+###############
+
+print(result)
 
 # let's try to better up our rf algo using different resampling techniques:
 
@@ -110,15 +114,16 @@ f_metrics(real=df_pred$output, predicted = test_rf_under, t=0.5)
 f_metrics(real=df_pred$output, predicted = test_rf_over, t=0.5)
 f_metrics(real=df_pred$output, predicted = test_rf_smote, t=0.5)
 
-result<-t(sapply(df_pred[, -c('id','output')], function(x) f_metrics_simple(real=df_pred[['output']],predicted=x)))
+
+result<-data.table(method=c('rf','rf_under','rf_over','rf_smote'),
+                   t(sapply(df_pred[,!c('output','id')], f_metrics_simple, real=df_pred$output)))
 
 
+prob_pred<-cbind(df_pred[, .(output)], test_rf,test_rf_under, test_rf_over, test_rf_smote)
+result<-cbind(result, auc=unlist(sapply(prob_pred[,!c('output')], f_metrics, real=df_pred$output,t=0.5)['auc',]))
 
-result
+print(result)
 
-# lets get more metrics to compare
-
-confusionMatrix(data = df_pred$test_rf, reference=df_pred$output, positive='TRUE')
 
 
 
