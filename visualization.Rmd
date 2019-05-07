@@ -1,0 +1,115 @@
+---
+title: "Interactive Visualization - Advanced R"
+author: "Sirio Sobrino"
+date: "20/4/2019"
+output: 
+  ioslides_presentation:
+    widescreen: true
+    smaller: true
+    incremental: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source('/Users/ssobrinou/IE/Advanced/2019_Advanced/Regression/code/load_libraries.R')
+library(htmlwidgets, quietly = T)
+library(highcharter, quietly = T)
+library(plotly, quietly = T)
+library(ggiraph, quietly = T)
+library(leaflet, quietly=T)
+
+target="price"
+
+```
+
+## R Presentation with ioslides
+
+This is an R Markdown presentation. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+## Some powerfull libraries for Interactive Visualization {.incremental}
+
+- plotly
+- ggiraph
+- dygraphs
+- leaflet
+- highcharter
+- visNetwork
+- networkD3
+
+
+
+## Reading the data {.smaller .flexbox .vcenter} 
+```{r reading_data} 
+path='/Users/ssobrinou/IE/Advanced/2019_Advanced/Datasets/Regression/'
+file='Automobile_2.csv'
+df<-fread(paste(path,file, sep='/'),
+          stringsAsFactors = T)
+df<-df[complete.cases(df)]
+head(df,5)
+```
+
+## plotly 
+
+- You can use pure plotly which is pretty flexible and powerful.
+- Limited features compared to ggplot.
+
+```{r plotly}
+
+plot_ly(df, x=~hp, y=~get(target), type='scatter', mode='markers')
+
+```
+
+
+## plotly::ggplotly
+
+- Plotly has a wraper function to turn any ggplot chart interactive.
+- For complicated charts it's not easy to customize and doesn't deal very well with shiny in some cases. 
+- Still a very recommended function for standard charts.
+
+```{r ggplot,fig.height=3, fig.width=4.5}
+
+ggplotly(ggplot(df, aes(x=hp, y=get(target)))+
+           geom_hex()+
+           geom_smooth(method = 'loess',formula= 'y ~ x')+
+           ylab(target))
+
+
+```
+
+## ggiraph
+
+- A library designed to make ggplot interactive.
+- Doesn't support all ggplot features but the vast majority.
+- More stable and easier to tune than plotly.
+
+```{r ggiraph}
+p<-ggplot(df, aes(x=hp, y=get(target),colour=make, tooltip=paste(sep = "<br/>",
+                                                           make,
+                                                           paste('hp:',hp),
+                                                           paste0(target,': ',hp))))+
+  ylab(target)+
+  geom_point_interactive()
+
+
+```
+
+---
+```{r plot_ggiraph}
+ggiraph::ggiraph(code={print(p)}, width = 0.5, width_svg = 7)
+```
+
+## highcharter 
+
+```{r highcharter}
+hchart(df, type="scatter", hcaes(x = hp, y = get(target), group = drive))
+```
+
+--- 
+
+```{r rCharts}
+# hchart(density(df$hp), type="area")
+hchart(df, type="column", hcaes(x=hp,y=get(target),group = drive))
+
+```
