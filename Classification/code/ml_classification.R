@@ -229,7 +229,7 @@ result[which.max(result$precission)]
 result[which.max(result$accuracy)]
 result[which.max(result$auc)]
 
-saveRDS(result,'/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/credit_results.RData')
+saveRDS(result,'/Users/ssobrinou/IE/Advanced/2019_Advanced/Classification/heart_results.RData')
 
 
 
@@ -257,7 +257,6 @@ ggplot(df_prob_melt, aes(x=value, colour=variable))+geom_density(alpha=0.5)+face
 
 
 # plotting several rocs on the same graph
-
 
 f_metrics(real=df_pred$output, predicted=test_rf)
 f_plot_roc(real=df_pred$output, predicted=test_rf, title='test rf')
@@ -299,3 +298,4 @@ ggplot(roc_results, aes(x=1-specificity, y=sensitivity, colour=method))+geom_pat
 par(mfrow=c(1,2))
 plot(x=threshold_seq,roc_results[method=='test_rf']$specificity, type='l', xlab='t', ylab='sensitivity'); grid()
 plot(x=threshold_seq,roc_results[method=='test_rf']$sensitivity, type='l', xlab='t', ylab='specificity'); grid()
+dev.off()
