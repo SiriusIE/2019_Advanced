@@ -5,9 +5,6 @@ plot(AirPassengers); grid()
 
 y<-copy(AirPassengers)
 
-plot(y); grid()
-
-# creating fourier series of different amplitude
 
 library(forecast)
 
@@ -19,6 +16,9 @@ frequency(y)
 decomp<-stl(y, s.window = 12)
 plot(decomp); grid()
 
+
+
+# creating fourier series of different amplitude
 
 forecast::fourier(y,K=4)
 
@@ -45,10 +45,6 @@ identical(round(s1,4), round(df$S1_12[1:12],4))
 par(mfrow=c(1,1))
 
 
-df
-corrplot::corrplot(cor(df))
-
-plot(df$S1_12, type='b')
 
 df[, tend:=seq(1,nrow(df))]
 
