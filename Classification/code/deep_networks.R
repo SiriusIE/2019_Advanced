@@ -140,14 +140,14 @@ model_keras %>%
 layer_dense (units              = 128, #=> Num Of Nodes
              activation         = "relu",    
              input_shape        = ncol(whole_data$train)-1) %>% 
-  layer_dropout (rate = 0.25) %>%  #=> Dropout Below 10%: Prevent overfitting
+  layer_dropout (rate = 0.05) %>%  #=> Dropout Below 10%: Prevent overfitting
   # (2) 2nd Hidden Layer-------------------------------------------------
-layer_dense (units              = 32,
+layer_dense (units              = 16,
              activation         = "relu") %>% 
-  layer_dropout (rate = 0.1) %>%  
+  layer_dropout (rate = 0.05) %>%  
   layer_dense (units              = 4,
                activation         = "relu") %>% 
-  layer_dropout (rate = 0.1) %>%  
+  layer_dropout (rate = 0.05) %>%  
   # (3) Output Layer-----------------------------------------------------
 layer_dense (units              = 1) %>% 
   # (4) Compile Model-----------------------------------------------------
@@ -165,7 +165,7 @@ system.time (
     x                = as.matrix (whole_data$train[, -'target']), #=> Matrix
     y                = whole_data$train[['target']],             #=> Numeric Vector 
     batch_size       = 50,     #=> #OfSamples/gradient update in each epoch
-    epochs           = 500,     #=> Control Training cycles
+    epochs           = 50,     #=> Control Training cycles
     validation_split = 0.20) ) #=> Include 20% data for 'Validation' Model
 print (history)
 
