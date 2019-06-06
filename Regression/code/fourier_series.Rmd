@@ -15,18 +15,25 @@ plot(AirPassengers); grid()
 
 y<-copy(AirPassengers)
 
+df<-data.table(date=seq(as.Date('1949-01-01'), as.Date('1960-12-01'), by='1 month'),y=y)
+
+train_df<-df[date<'1960-01-01']
+test_df<-df[date>='1960-01-01']
+
+train_y<-ts(train_df$y,freq=12,start=c(1949,1))
+
 ```
 
 The stl decomposition method from the forecast package show's us a de-composition of our series onto trend, seasonality (cycle) and irregular
 ```{r}
 library(forecast)
 
-str(y)
-frequency(y)
+str(train_y)
+frequency(train_y)
 
 # stl function for time series de-composiong
 
-decomp<-stl(y, s.window = 12)
+decomp<-stl(train_y, s.window = 12)
 plot(decomp); grid()
 ```
 
@@ -34,17 +41,16 @@ The fourier function generates k-pairs of fourier transformations based on the d
 ```{r}
 # creating fourier series of different amplitude
 
-forecast::fourier(y,K=4)
+forecast::fourier(train_y,K=4)[1:10,]
 
-df<-data.table(y=y,
-               fourier(y,K=2))
-head(df)
-
-colnames(df)<-gsub('-','_',colnames(df))
+df_fourier<-data.table(train_y=train_y,
+               fourier(train_y,K=2))
+colnames(df_fourier)<-gsub('-','_',colnames(df_fourier))
+head(df_fourier)
 ```
 
 
-Actualy, fouriers series are just sin and cosine functions for 1, 2...k amplitude of a simple function
+Actualy, fourier series are just sin and cosine functions for 1, 2...k amplitude of an angular function
 ```{r}
 
 t=seq(1,12)
@@ -56,10 +62,10 @@ s1<-sin(2*pi*t/N)
 c2<-cos(2*2*pi*t/N)
 s2<-sin(2*2*pi*t/N)
 
-identical(round(c1,4), round(df$C1_12[1:12],4))
-identical(round(s1,4), round(df$S1_12[1:12],4))
-identical(round(c2,4), round(df$C2_12[1:12],4))
-identical(round(s2,4), round(df$S2_12[1:12],4))
+identical(round(c1,4), round(df_fourier$C1_12[1:12],4))
+identical(round(s1,4), round(df_fourier$S1_12[1:12],4))
+identical(round(c2,4), round(df_fourier$C2_12[1:12],4))
+identical(round(s2,4), round(df_fourier$S2_12[1:12],4))
 
 ```
 
@@ -74,16 +80,28 @@ par(mfrow=c(1,1))
 ```
 
 
+
+Now we fit a linear regression using the fourier terms to
+capture the seasonallity of the series on an automatic manner
 ```{r}
-df[, tend:=seq(1,nrow(df))]
-
-lm_fourier<-lm(log(y)~., data=df)
-summary(lm_fourier)  
-
-plot(as.numeric(y), type='l'); grid()
+df_model<-data.table(date=seq(as.Date('1949-01-01'), as.Date('1960-12-01'), by='1 month'),
+                           y=as.numeric(y),
+                           fourier(y,K=4))
+      df_model[, tend:=seq(1,nrow(df_model))]
+      
+      df_model_train<-df_model[date<'1960-01-01']
+      df_model_test<-df_model[date>='1960-01-01']
+      
+      # estimate model
+      lm_fourier<-lm(log(y)~., data=df_model_train[, -'date'])
+      summary(lm_fourier)
+      
+plot(as.numeric(train_y), type='l'); grid()
 lines(exp(fitted(lm_fourier)), col='red')
 ```
 
+
+The number of fourier terms shjould be optimised on the bias-variance tradeoff:
 ```{r, echo=FALSE}
 library(shiny)
 shinyApp(
@@ -102,14 +120,19 @@ shinyApp(
     output$fitplot = renderPlot({
       
       # calculate fourier series varying with k input (and a fixed linear trend)
-      df<-data.table(y=as.numeric(AirPassengers),
-               fourier(y,K=input$k))
-      df[, tend:=seq(1,nrow(df))]
+      df_model<-data.table(date=seq(as.Date('1949-01-01'), as.Date('1960-12-01'), by='1 month'),
+                           y=as.numeric(y),
+                           fourier(y,K=input$k))
+      df_model[, tend:=seq(1,nrow(df_model))]
+      
+      df_model_train<-df_model[date<'1960-01-01']
+      df_model_test<-df_model[date>='1960-01-01']
+      
       # estimate model
-      lm_fourier<-lm(log(y)~., data=df)
+      lm_fourier<-lm(log(y)~., data=df_model_train)
       
       # plot fit
-      plot(as.numeric(y), type='l'); grid()
+      plot(as.numeric(train_y), type='l'); grid()
       lines(exp(fitted(lm_fourier)), col='red')
     })
   },
@@ -118,5 +141,59 @@ shinyApp(
 )
 ```
 
+Predicting with our model: 
+
+```{r}
+test_df[, pred_fourier:=round(exp(predict(lm_fourier, newdata=df_model_test)))]
+test_df
+
+ggplot(melt(test_df, id.vars = 'date'), aes(x=date, y=value, colour=variable))+geom_point()+geom_line()
+
+```
+
+
+Another option...go into Arima!!!
+```{r}
+arima_model<-auto.arima(train_y,lambda = 'auto')
+summary(arima_model)
+
+test_df[, pred_arima:=round(as.data.frame(forecast(arima_model, h=12))[,1])]
+
+ggplot(melt(test_df, id.vars = 'date'), aes(x=date, y=value, colour=variable))+geom_point()+geom_line()
+
+```
+
+
+Also interesting trying with seasonal dummy variables: 
+```{r}
+df[, month:=factor(lubridate::month(date))]
+str(df)
+
+data_months<-caret::dummyVars(formula= ~., data = df, fullRank=T,sep = "_")
+data_months<-data.table(predict(data_months, newdata = df))
+
+
+data_months[, date:=seq(as.Date('1949-01-01'), as.Date('1960-12-01'), by='1 month')]
+
+
+str(data_months)
+
+data_months[, tend:=seq(1, nrow(data_months))]
+
+train_df_months<-data_months[date<'1960-01-01']
+test_df_months<-data_months[date>='1960-01-01']
+
+```
+
+
+```{r}
+lm_months<-lm(log(y)~., data=train_df_months)
+summary(lm_months)
+
+test_df[, pred_months:=round(exp(predict(lm_months, newdata = test_df_months)))]
+
+ggplot(melt(test_df, id.vars = 'date'), aes(x=date, y=value, colour=variable))+geom_point()+geom_line()
+
+```
 
 
